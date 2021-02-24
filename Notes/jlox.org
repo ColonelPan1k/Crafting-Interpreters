@@ -60,3 +60,149 @@ a list of tokens from that string.
    the source string and gives us the token for current - 1.
    => This function is what actually converts the token from a random character/string to something
    we can use in our program
+* Representing Code (Grammars and ASTs)
+=> Two types of grammars, lexical and syntactic.
+
+Lexical grammar (regular language):
+  => The "alphabet" is made up of characters
+  => A "string" is a lexeme or token
+  => It is implemented through a lexer/scanner
+
+Syntactic grammar (Context-free grammar):
+  => The "alphabet" is made up of tokens
+  => A "string" is an expression
+  => It is implemented through a parser
+
+Example:
+
+_Lexical grammar_ defines how an incoming string should be tokenized. It's responsible for turning a string like:
+"let x = 10;" into : LET "let", VAR "x", EQ "=", NUM "10"
+
+_Syntactic grammar_ defines the valid and invalid arrangements of keywords.
+These define what a valid expression is in a given language. This is the same
+as writing out a grammar for a language like English (albeit not as complex).
+
+
+
+The syntactic grammar is made up of two kinds of nodes: Terminal and nonterminal nodes.
+=> A terminal node is any node which is a base/literal value in the language.
+  => An expression parser uses NUMBER as a terminal value since a number is just
+  itself with no other possible operations.  10 will always return 10
+
+=> A nonterminal node is a node which references another rule in the grammar.
+  => This would be operators in an expression parser.  An operator (PLUS, MINUS, STAR, SLASH)
+  take in two terminal nodes, does something to them and returns a terminal node.
+
+
+Computer languages use BNF (Backus-Nauer Form) to describe computer language grammar.
+
+=> Each rule is a name, followed by an arrow (->), followed by a sequence of symbols
+   and finally ending with a semicolon.  Terminals are quoted strings and nonterminals
+   are lowercase words.
+
+   => i.e. some keyword that does something is a quoted string whereas a variable that could
+   be anything is a lowercase word
+
+// this feels a little bit like paired down Haskell type statements
+-- Simple grammar for an expression --
+Expression -> number "plus" number;
+Expression -> number "minus" number;
+Expression -> number "times" number;
+Expression -> number "divided by" number;
+
+number -> [0-9];
+
+--- A breakfast example grammar from the book ---
+
+breakfast -> protein "with" breakfast "on the side";
+breakfast -> protein;
+breakfast -> bread;
+
+protein -> crispiness "crispy" "bacon";
+protein -> "sausage";
+protein -> cooked "eggs";
+
+crispiness -> "really"
+crispiness -> "really" crispiness
+
+cooked -> "scrambled";
+cooked -> "poached";
+cooked -> "fried";
+
+bread -> "toast";
+bread -> "biscuits";
+bread -> "English muffin"
+
+- Notice that each keyword can be followed to a resulting terminal node.
+
+Generating random, valid, "breakfasts" are easy, you just have to follow each
+resultant node to some number of terminal points, eg:
+
+breakfast -> protein "with" breakfast "on the side";
+  protein -> "sausage";
+breakfast => "sausage" "with" breakfast "on the side"
+    breakfast -> bread
+        bread -> "toast"
+
+Generates => "sausage" "with" "toast" "on the side"
+
+
+=> We can extend and simplify our grammar using some operators, |, (), *, ?, +
+
+=> Instead of
+protein -> crispiness "crispy" "bacon";
+protein -> "sausage";
+protein -> cooked "eggs";
+
+we could just write:
+protein -> crispiness "crispy" "bacon" | "sausage" | cooked "eggs"
+
+using the | operator
+
+=> () allows for grouping
+protein -> ("scrambled" | "poached" | "fried") "eggs"
+
+=> * allows for better and easier recursion
+crispiness -> "really" "really"*;
+
+=> postfix +:
+crispiness -> "really"+
+allows for recusion with at least one of a given element
+
+=> ? an optional production that can appear zero or one time:
+breakfast -> protein ("with" breakfast "on the side")?;
+
+
+-----------
+// This is starting to look a lot closer to Haskell
+
+Using these operators, we can condense the grammar down into these three
+more simple rules
+
+breakfast -> protein ("with" breakfast "on the side")
+          | bread;
+
+protein   -> "really"+ "crispy" "bacon"
+          | "sausage"
+          | ("scrambled" | "poached" | "fried") "eggs";
+
+bread -> "toast" | "biscuits" | "English muffin";
+
+--------------
+A paired down version of Lox's syntactic grammar, just to get things up and running
+
+Grammar for lox expressions:
+
+expressions -> literal
+            | unary
+            | binary
+            | grouping ;
+
+literal     -> NUMBER | STRING | "true" | "false" | "nil";
+
+grouping    -> "(" expression ")";
+
+unary       -> ("-" | "!") expression;
+binary      -> expression operator expression;
+operator    -> "==" | "! =" | "<" | "< =" | ">" "> ="
+            | "+" | "-" | "*" | "/"
